@@ -214,15 +214,46 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
     return false;
 }
 
-fn is_game_finished(matrix: [[u16; 4]; 4]) -> bool {
+fn is_game_finished(matrix: [[u16; 4]; 4]) -> u8 {
+
+
+    let mut dummy_matrix = matrix.clone();
+
+    let mut loser_cnt = 0;
+    if !move_down(&mut dummy_matrix)
+    {
+        loser_cnt+=1;
+    }
+    dummy_matrix = matrix.clone();
+    if !move_up(&mut dummy_matrix)
+    {
+        loser_cnt+=1;
+    }
+    dummy_matrix = matrix.clone();
+    if !move_left(&mut dummy_matrix)
+    {
+        loser_cnt+=1;
+    }
+    dummy_matrix = matrix.clone();
+    if !move_right(&mut dummy_matrix)
+    {
+        loser_cnt+=1;
+    }
+
+    if loser_cnt == 4
+    {
+        return 2;
+    }
     for i in matrix.iter() {
         for &j in i.iter() {
             if j == 2048 {
-                return true;
+                return 1;
             }
         }
     }
-    false
+
+
+    return 0;
 }
 
 fn put_random_value(matrix: &mut [[u16; 4]; 4]) -> [[u16; 4]; 4] {
@@ -233,9 +264,9 @@ fn put_random_value(matrix: &mut [[u16; 4]; 4]) -> [[u16; 4]; 4] {
         rand_row = rng.gen_range(0..4);
         rand_col = rng.gen_range(0..4);
     }
-    let rand_nr = rng.gen_range(0..4);
+    let rand_nr = rng.gen_range(0..20);
     if rand_nr == 0 {
-        //25% chance of a 4
+        //5% chance of a 4
         matrix[rand_row as usize][rand_col as usize] = 4;
     } else {
         matrix[rand_row as usize][rand_col as usize] = 2
@@ -301,7 +332,7 @@ fn load_game() -> io::Result<[[u16;SIZE];SIZE]>
 }
 
 
-fn play_game(new_game: bool) -> io::Result<bool>
+fn play_game(new_game: bool) -> io::Result<u8>
 {
     let mut game_matrix: [[u16; 4]; 4]= [[0; 4]; 4];
     if new_game {
@@ -330,7 +361,8 @@ fn play_game(new_game: bool) -> io::Result<bool>
     }
     println!("");
 
-    while !is_game_finished(game_matrix) {
+    let mut state = is_game_finished(game_matrix);
+    while state == 0 {
         let event = read()?;
 
         if event == Event::Key(KeyCode::Down.into()) {
@@ -362,8 +394,9 @@ fn play_game(new_game: bool) -> io::Result<bool>
             println!("");
         }
         println!("");
+        state = is_game_finished(game_matrix);
     }
-    Ok(true)
+    Ok(state)
 }
 
 fn how_to_play()
@@ -375,7 +408,7 @@ where no more possible moves can be made, you lose!");
     println!("The game saves automatically after every move so you can pick up right where you left from!");
 }
 
-fn menu() -> io::Result<bool> {
+fn menu() -> io::Result<u8> {
     enable_raw_mode()?;
 
     let mut stdout = io::stdout();
@@ -445,14 +478,19 @@ fn menu() -> io::Result<bool> {
             }
         }
     }
-
-    Ok(true)
+    Ok(3)
 }
 
 fn main() -> io::Result<()> {
     match menu() {
-        Ok(_) => {
-            println!("Goodbye! See you around!");
+        Ok(state) => {
+            match state
+            {
+                1 => print!("Congratulations! You won!"),
+                2 => print!("Game over!"),
+                _ => println!("Goodbye! See you around!"),
+            }
+            
         }
         Err(error) => {
             return Err(error);
