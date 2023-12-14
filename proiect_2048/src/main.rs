@@ -9,6 +9,73 @@ use crossterm::{
 use rand::Rng;
 
 const SIZE: usize = 4;
+
+fn move_right(board: &mut [[u16; SIZE]; SIZE]) -> bool {
+    let initial_board = board.clone();
+
+  
+    for row in 0..SIZE {
+        // Compress non-zero values to the left
+        let mut compressed_row: Vec<u16> = board[row]
+            .iter()
+            .filter(|&&value| value != 0)
+            .cloned()
+            .collect();
+        
+        let mut remaining_zeros = SIZE - compressed_row.len();
+        //Pad the vector with zeros to the left
+        while remaining_zeros > 0
+        {
+            compressed_row.insert(0, 0);
+            remaining_zeros-=1;
+        }
+        board[row] = compressed_row.as_slice().try_into().unwrap();
+    }
+
+    for row in 0..SIZE
+    {
+        for col in (1..4).rev()
+        {
+           
+            // Merge adjacent values in the board
+            if board[row][col] == board[row][col-1]
+            {
+                board[row][col] *=2;
+                board[row][col-1] = 0;
+            }
+        }
+    }
+
+    // Recompress all non-zero values to the right
+    for row in 0..SIZE {
+        let mut compressed_row: Vec<u16> = board[row]
+            .iter()
+            .filter(|&&value| value != 0)
+            .cloned()
+            .collect();
+
+        let mut remaining_zeros = SIZE - compressed_row.len();
+
+        while remaining_zeros > 0
+        {
+            compressed_row.insert(0, 0);
+            remaining_zeros-=1;
+        }
+        board[row] = compressed_row.as_slice().try_into().unwrap();
+    }
+    
+    //Check of the board has changed to see whether or not to add a new value to the board
+    for i in 0..4 {
+        for j in 0..4 {
+            if initial_board[i][j] != board[i][j] {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 fn move_left(board: &mut [[u16; SIZE]; SIZE]) -> bool {
     let initial_board = board.clone();
 
@@ -49,6 +116,8 @@ fn move_left(board: &mut [[u16; SIZE]; SIZE]) -> bool {
 
         board[row] = compressed_row.as_slice().try_into().unwrap();
     }
+
+    //Check of the board has changed to see whether or not to add a new value to the board
     for i in 0..4 {
         for j in 0..4 {
             if initial_board[i][j] != board[i][j] {
@@ -116,13 +185,17 @@ fn main() -> io::Result<()> {
     let mut game_matrix: [[u16; 4]; 4] = [[0; 4]; 4];
     game_matrix = put_random_value(&mut game_matrix);
     game_matrix = put_random_value(&mut game_matrix);
-    for i in 0..4 {
-        for j in 0..4 {
-            print! {"{} ", game_matrix[i][j]};
-        }
-        println! {""};
-    }
+    
     while !is_game_finished(game_matrix) {
+
+        for i in 0..4 {
+            for j in 0..4 {
+                print! {"{} ", game_matrix[i][j]};
+            }
+            println!("");
+        }
+        println!("");
+
         let event = read()?;
 
         let mut has_board_changed = false;
@@ -134,18 +207,12 @@ fn main() -> io::Result<()> {
             has_board_changed = move_left(&mut game_matrix);
         } else if event == Event::Key(KeyCode::Right.into()) {
             println!("RIGHT!");
+            has_board_changed = move_right(&mut game_matrix);
         } else if event == Event::Key(KeyCode::Enter.into()) {
             break;
         } else {
             continue;
         }
-        for i in 0..4 {
-            for j in 0..4 {
-                print! {"{} ", game_matrix[i][j]};
-            }
-            println! {""};
-        }
-        println! {""};
         if has_board_changed == true {
             game_matrix = put_random_value(&mut game_matrix);
         }
