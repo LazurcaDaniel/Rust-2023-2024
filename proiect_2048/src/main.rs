@@ -1,4 +1,4 @@
-use std::io::{self, Write};
+use std::io::{self, Write, BufRead, BufReader};
 use std::fs::{File, OpenOptions};
 
 use crossterm::event::{Event, KeyCode, KeyboardEnhancementFlags, PushKeyboardEnhancementFlags};
@@ -267,6 +267,39 @@ fn save_game(board: &[[u16;SIZE];SIZE]) -> io::Result<()>
 }
 
 
+fn load_game() -> io::Result<[[u16;SIZE];SIZE]>
+{
+    let file = File::open(FILE_NAME)?;
+
+    let mut game_matrix: [[u16; SIZE]; SIZE] = [[0; SIZE]; SIZE];
+
+    // Create BufReader outside the loop
+    let mut buf_reader = BufReader::new(file);
+
+    for i in 0..SIZE {
+        let mut buffer = String::new();
+        
+        // Read a line from the buffered reader
+        if buf_reader.read_line(&mut buffer)? > 0 {
+            // Parse values and fill the matrix
+            for (j, value_str) in buffer.trim().split_whitespace().enumerate().take(SIZE) {
+                if let Ok(value) = value_str.parse() {
+                    game_matrix[i][j] = value;
+                }
+            }
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "File does not contain enough data for the matrix",
+            ));
+        }
+    }
+
+    Ok(game_matrix)
+
+    
+}
+
 
 fn play_game(new_game: bool) -> io::Result<bool>
 {
@@ -274,6 +307,19 @@ fn play_game(new_game: bool) -> io::Result<bool>
     if new_game {
     game_matrix = put_random_value(&mut game_matrix);
     game_matrix = put_random_value(&mut game_matrix);
+    }
+    else {
+        match load_game()
+        {
+            Ok(matrix) =>
+            {
+                game_matrix = matrix;
+            }
+            Err(error) =>
+            {
+                return Err(error);
+            }
+        }
     }
 
     for i in 0..4 {
