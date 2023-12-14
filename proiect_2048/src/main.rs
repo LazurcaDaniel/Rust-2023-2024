@@ -25,7 +25,9 @@ fn move_right(board: &mut [[u16; SIZE]; SIZE]) -> bool {
         //Pad the vector with zeros to the left
         while remaining_zeros > 0 {
             compressed_row.insert(0, 0);
-            remaining_zeros -= 1;
+            if remaining_zeros > 0 {
+                remaining_zeros -= 1;
+            }
         }
         board[row] = compressed_row.as_slice().try_into().unwrap();
     }
@@ -165,6 +167,51 @@ fn move_up(board: &mut [[u16; SIZE]; SIZE]) -> bool {
     return false;
 }
 
+fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
+    let initial_board = board.clone();
+    for col in 0..SIZE {
+        //compress all non zero values up (or left, as it looks) and let zeroes be down(or right as it looks)
+        let mut compressed_row: Vec<u16> = vec![0, 0, 0, 0];
+        let mut cnt = 0;
+        for row in (0..SIZE).rev() {
+            if board[row][col] != 0 {
+                compressed_row[cnt] = board[row][col];
+                cnt += 1;
+            }
+        }
+        //update the values of the column
+        for i in 0..SIZE - 1 {
+            if compressed_row[i] == compressed_row[i + 1] {
+                compressed_row[i] *= 2;
+                compressed_row[i + 1] = 0;
+            }
+        }
+        //add the values back to the board
+        cnt = SIZE - 1;
+
+        for i in 0..SIZE {
+            if compressed_row[i] != 0 {
+                board[cnt][col] = compressed_row[i];
+                if cnt > 0 {
+                    cnt -= 1;
+                }
+            }
+        }
+        //fill with zeroes
+        for i in 0..=cnt {
+            board[i][col] = 0;
+        }
+    }
+    for i in 0..4 {
+        for j in 0..4 {
+            if initial_board[i][j] != board[i][j] {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 fn is_game_finished(matrix: [[u16; 4]; 4]) -> bool {
     for i in matrix.iter() {
         for &j in i.iter() {
@@ -221,23 +268,22 @@ fn main() -> io::Result<()> {
     game_matrix = put_random_value(&mut game_matrix);
     game_matrix = put_random_value(&mut game_matrix);
 
-    while !is_game_finished(game_matrix) {
-        for i in 0..4 {
-            for j in 0..4 {
-                print! {"{} ", game_matrix[i][j]};
-            }
-            println!("");
+    for i in 0..4 {
+        for j in 0..4 {
+            print! {"{} ", game_matrix[i][j]};
         }
         println!("");
-
+    }
+    println!("");
+    let mut has_board_changed = false;
+    while !is_game_finished(game_matrix) {
         let event = read()?;
 
-        let mut has_board_changed = false;
+        
         if event == Event::Key(KeyCode::Down.into()) {
-            println!("DOWN!");
+            has_board_changed = move_down(&mut game_matrix);
         } else if event == Event::Key(KeyCode::Up.into()) {
             has_board_changed = move_up(&mut game_matrix);
-            println!("UP!");
         } else if event == Event::Key(KeyCode::Left.into()) {
             has_board_changed = move_left(&mut game_matrix);
         } else if event == Event::Key(KeyCode::Right.into()) {
@@ -247,9 +293,16 @@ fn main() -> io::Result<()> {
         } else {
             continue;
         }
-        if has_board_changed == true {
+        if has_board_changed {
             game_matrix = put_random_value(&mut game_matrix);
         }
+        for i in 0..4 {
+            for j in 0..4 {
+                print! {"{} ", game_matrix[i][j]};
+            }
+            println!("");
+        }
+        println!("");
     }
 
     Ok(())
