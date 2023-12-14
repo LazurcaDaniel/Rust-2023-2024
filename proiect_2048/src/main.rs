@@ -1,4 +1,5 @@
-use std::io;
+use std::io::{self, Write};
+use std::fs::{File, OpenOptions};
 
 use crossterm::event::{Event, KeyCode, KeyboardEnhancementFlags, PushKeyboardEnhancementFlags};
 use crossterm::{
@@ -9,6 +10,7 @@ use crossterm::{
 use rand::Rng;
 
 const SIZE: usize = 4;
+const FILE_NAME: &str = "save_file.txt";
 
 fn move_right(board: &mut [[u16; SIZE]; SIZE]) -> bool {
     let initial_board = board.clone();
@@ -241,7 +243,93 @@ fn put_random_value(matrix: &mut [[u16; 4]; 4]) -> [[u16; 4]; 4] {
     *matrix
 }
 
-fn main() -> io::Result<()> {
+fn save_game(board: &[[u16;SIZE];SIZE]) -> io::Result<()>
+{
+    match OpenOptions::new().write(true).truncate(true).create(true).open(FILE_NAME)
+    {
+        Ok(mut file) =>
+        {
+            for row in board
+            {
+                for &value in row
+                {
+                    write!(file, "{} ", value)?;
+                }
+                writeln!(file)?;
+            }
+            Ok(())
+        }
+        Err(error) =>
+        {
+            return Err(error);
+        }
+    }
+}
+
+
+
+fn play_game(new_game: bool) -> io::Result<bool>
+{
+    let mut game_matrix: [[u16; 4]; 4]= [[0; 4]; 4];
+    if new_game {
+    game_matrix = put_random_value(&mut game_matrix);
+    game_matrix = put_random_value(&mut game_matrix);
+    }
+
+    for i in 0..4 {
+        for j in 0..4 {
+            print! {"{} ", game_matrix[i][j]};
+        }
+        println!("");
+    }
+    println!("");
+
+    while !is_game_finished(game_matrix) {
+        let event = read()?;
+
+        if event == Event::Key(KeyCode::Down.into()) {
+            if move_down(&mut game_matrix) {
+                game_matrix = put_random_value(&mut game_matrix);
+            }
+        } else if event == Event::Key(KeyCode::Up.into()) {
+            if move_up(&mut game_matrix) {
+                game_matrix = put_random_value(&mut game_matrix);
+            }
+        } else if event == Event::Key(KeyCode::Left.into()) {
+            if move_left(&mut game_matrix) {
+                game_matrix = put_random_value(&mut game_matrix);
+            }
+        } else if event == Event::Key(KeyCode::Right.into()) {
+            if move_right(&mut game_matrix) {
+                game_matrix = put_random_value(&mut game_matrix);
+            }
+        } else if event == Event::Key(KeyCode::Enter.into()) {
+            break;
+        } else {
+            continue;
+        }
+        save_game(&game_matrix)?;
+        for i in 0..4 {
+            for j in 0..4 {
+                print! {"{} ", game_matrix[i][j]};
+            }
+            println!("");
+        }
+        println!("");
+    }
+    Ok(true)
+}
+
+fn how_to_play()
+{
+    println!("Use your arrow keys or swipe left or right, up or down to move the tiles.
+When two tiles with the same number touch, 
+they merge into one. Once you get 2048 in any square, you win. Once you reach a state
+where no more possible moves can be made, you lose!");
+    println!("The game saves automatically after every move so you can pick up right where you left from!");
+}
+
+fn menu() -> io::Result<bool> {
     enable_raw_mode()?;
 
     let mut stdout = io::stdout();
@@ -264,46 +352,67 @@ fn main() -> io::Result<()> {
     }
 
     execute!(stdout, EnableBracketedPaste,)?;
-    let mut game_matrix: [[u16; 4]; 4] = [[0; 4]; 4];
-    game_matrix = put_random_value(&mut game_matrix);
-    game_matrix = put_random_value(&mut game_matrix);
 
-    for i in 0..4 {
-        for j in 0..4 {
-            print! {"{} ", game_matrix[i][j]};
-        }
-        println!("");
-    }
-    println!("");
-    let mut has_board_changed = false;
-    while !is_game_finished(game_matrix) {
-        let event = read()?;
-
-        
-        if event == Event::Key(KeyCode::Down.into()) {
-            has_board_changed = move_down(&mut game_matrix);
-        } else if event == Event::Key(KeyCode::Up.into()) {
-            has_board_changed = move_up(&mut game_matrix);
-        } else if event == Event::Key(KeyCode::Left.into()) {
-            has_board_changed = move_left(&mut game_matrix);
-        } else if event == Event::Key(KeyCode::Right.into()) {
-            has_board_changed = move_right(&mut game_matrix);
-        } else if event == Event::Key(KeyCode::Enter.into()) {
-            break;
-        } else {
-            continue;
-        }
-        if has_board_changed {
-            game_matrix = put_random_value(&mut game_matrix);
-        }
-        for i in 0..4 {
-            for j in 0..4 {
-                print! {"{} ", game_matrix[i][j]};
+    println!("Welcome to 2048!");
+    println!("Choose an option by typing the number coresponding to it.");
+    println!("1. New game");
+    println!("2. Load game");
+    println!("3. How to play");
+    println!("4. Quit");
+    loop {
+        match read() {
+            Ok(event) => {
+                if event == Event::Key(KeyCode::Char('1').into()) {
+                    match play_game(true)
+                    {
+                        Ok(state) =>
+                        {   
+                            return Ok(state);
+                        }
+                        Err(error) =>
+                        {
+                            return Err(error);
+                        }
+                    }
+                } else if event == Event::Key(KeyCode::Char('2').into()) {
+                    match play_game(false)
+                    {
+                        Ok(state) =>
+                        {
+                            return Ok(state);
+                        }
+                        Err(error) =>
+                        {
+                            return Err(error);
+                        }
+                    }
+                } else if event == Event::Key(KeyCode::Char('3').into()) {
+                    how_to_play();
+                } else if event == Event::Key(KeyCode::Char('4').into()) {
+                    break;
+                } else {
+                    continue;
+                }
             }
-            println!("");
+            Err(error) => {
+                return Err(error);
+            }
         }
-        println!("");
     }
+
+    Ok(true)
+}
+
+fn main() -> io::Result<()> {
+    match menu() {
+        Ok(_) => {
+            println!("Goodbye! See you around!");
+        }
+        Err(error) => {
+            return Err(error);
+        }
+    }
+    
 
     Ok(())
 }
