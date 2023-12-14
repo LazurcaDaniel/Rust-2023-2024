@@ -1,0 +1,5 @@
+C:\Users\Daniel\Desktop\Rust 2023\Lab6\p1\target\debug\build\thiserror-9c5646db4849a071\build_script_build-9c5646db4849a071.exe: C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\thiserror-1.0.50\build.rs
+
+C:\Users\Daniel\Desktop\Rust 2023\Lab6\p1\target\debug\build\thiserror-9c5646db4849a071\build_script_build-9c5646db4849a071.d: C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\thiserror-1.0.50\build.rs
+
+C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\thiserror-1.0.50\build.rs:

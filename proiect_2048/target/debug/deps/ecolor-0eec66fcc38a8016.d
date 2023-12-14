@@ -1,0 +1,11 @@
+C:\Users\Daniel\Desktop\Rust 2023\proiect_2048\target\debug\deps\ecolor-0eec66fcc38a8016.rmeta: C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\lib.rs C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\color32.rs C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\hsva_gamma.rs C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\hsva.rs C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\rgba.rs
+
+C:\Users\Daniel\Desktop\Rust 2023\proiect_2048\target\debug\deps\libecolor-0eec66fcc38a8016.rlib: C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\lib.rs C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\color32.rs C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\hsva_gamma.rs C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\hsva.rs C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\rgba.rs
+
+C:\Users\Daniel\Desktop\Rust 2023\proiect_2048\target\debug\deps\ecolor-0eec66fcc38a8016.d: C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\lib.rs C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\color32.rs C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\hsva_gamma.rs C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\hsva.rs C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\rgba.rs
+
+C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\lib.rs:
+C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\color32.rs:
+C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\hsva_gamma.rs:
+C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\hsva.rs:
+C:\Users\Daniel\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.24.1\src\rgba.rs:
