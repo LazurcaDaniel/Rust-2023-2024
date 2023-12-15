@@ -173,7 +173,7 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
     let initial_board = board.clone();
     for col in 0..SIZE {
         //compress all non zero values up (or left, as it looks) and let zeroes be down(or right as it looks)
-        let mut compressed_row: Vec<u16> = vec![0, 0, 0, 0];
+        let mut compressed_row: Vec<u16> = vec![0, 0, 0, 0]; 
         let mut cnt = 0;
         for row in (0..SIZE).rev() {
             if board[row][col] != 0 {
@@ -182,7 +182,7 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
             }
         }
         //update the values of the column
-        for i in 0..SIZE - 1 {
+        for i in 0..SIZE - 1{
             if compressed_row[i] == compressed_row[i + 1] {
                 compressed_row[i] *= 2;
                 compressed_row[i + 1] = 0;
@@ -200,7 +200,7 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
             }
         }
         //fill with zeroes
-        for i in 0..=cnt {
+        for i in 0..cnt {
             board[i][col] = 0;
         }
     }
@@ -224,6 +224,7 @@ fn is_game_finished(matrix: [[u16; 4]; 4]) -> u8 {
     {
         loser_cnt+=1;
     }
+    
     dummy_matrix = matrix.clone();
     if !move_up(&mut dummy_matrix)
     {
@@ -351,6 +352,11 @@ fn play_game(new_game: bool) -> io::Result<u8>
                 return Err(error);
             }
         }
+        if is_game_finished(game_matrix) !=0
+        {
+            println!("You don't have a saved game!");
+            menu()?;
+        }
     }
 
     for i in 0..4 {
@@ -360,8 +366,8 @@ fn play_game(new_game: bool) -> io::Result<u8>
         println!("");
     }
     println!("");
-
-    let mut state = is_game_finished(game_matrix);
+    let mut state = 0;
+    //let mut state = is_game_finished(game_matrix);
     while state == 0 {
         let event = read()?;
 
