@@ -13,11 +13,11 @@ const SIZE: usize = 4;
 const FILE_NAME: &str = "save_file.txt";
 
 fn move_right(board: &mut [[u16; SIZE]; SIZE]) -> bool {
-    let initial_board = board.clone();
+    let initial_board = *board;
 
-    for row in 0..SIZE {
+    for mut row in board.iter() {
         // Compress non-zero values to the left
-        let mut compressed_row: Vec<u16> = board[row]
+        let mut compressed_row: Vec<u16> = row
             .iter()
             .filter(|&&value| value != 0)
             .cloned()
@@ -31,7 +31,7 @@ fn move_right(board: &mut [[u16; SIZE]; SIZE]) -> bool {
                 remaining_zeros -= 1;
             }
         }
-        board[row] = compressed_row.as_slice().try_into().unwrap();
+        row = compressed_row.as_slice().try_into().unwrap();
     }
 
     for row in 0..SIZE {
@@ -70,7 +70,7 @@ fn move_right(board: &mut [[u16; SIZE]; SIZE]) -> bool {
         }
     }
 
-    return false;
+    false
 }
 
 fn move_left(board: &mut [[u16; SIZE]; SIZE]) -> bool {
@@ -181,7 +181,7 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
                 cnt += 1;
             }
         }
-        
+
         //update the values of the column
         for i in 0..SIZE - 1 {
             if compressed_row[i] == compressed_row[i + 1] {
@@ -189,7 +189,7 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
                 compressed_row[i + 1] = 0;
             }
         }
-        
+
         //add the values back to the board
         cnt = SIZE - 1;
 
@@ -201,12 +201,11 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
                 }
             }
         }
-        
+
         //fill with zeroes
         for i in 0..cnt {
             board[i][col] = 0;
         }
-       
     }
     for i in 0..4 {
         for j in 0..4 {
@@ -219,23 +218,23 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
 }
 
 fn is_game_finished(matrix: [[u16; 4]; 4]) -> u8 {
-    let mut dummy_matrix = matrix.clone();
+    let mut dummy_matrix = matrix;
 
     let mut loser_cnt = 0;
     if !move_down(&mut dummy_matrix) {
         loser_cnt += 1;
     }
-    dummy_matrix = matrix.clone();
+    dummy_matrix = matrix;
     if !move_up(&mut dummy_matrix) {
         loser_cnt += 1;
     }
 
-    dummy_matrix = matrix.clone();
+    dummy_matrix = matrix;
     if !move_left(&mut dummy_matrix) {
         loser_cnt += 1;
     }
 
-    dummy_matrix = matrix.clone();
+    dummy_matrix = matrix;
     if !move_right(&mut dummy_matrix) {
         loser_cnt += 1;
     }
@@ -255,23 +254,19 @@ fn is_game_finished(matrix: [[u16; 4]; 4]) -> u8 {
 }
 
 fn put_random_value(matrix: &mut [[u16; 4]; 4]) -> [[u16; 4]; 4] {
-    let mut ok:bool = false;
-    for i in 0..SIZE
-    {
-        for j in 0..SIZE
-        {
-            if matrix[i][j] == 0
-            {
+    let mut ok: bool = false;
+    for i in 0..SIZE {
+        for j in 0..SIZE {
+            if matrix[i][j] == 0 {
                 ok = true;
                 break;
             }
         }
     }
-    if !ok
-    {
+    if !ok {
         return *matrix;
     }
-    
+
     let mut rng = rand::thread_rng();
     let mut rand_row: u8 = rng.gen_range(0..4);
     let mut rand_col: u8 = rng.gen_range(0..4);
@@ -297,7 +292,6 @@ fn save_game(board: &[[u16; SIZE]; SIZE]) -> io::Result<()> {
         .open(FILE_NAME)
     {
         Ok(mut file) => {
-            
             for row in board {
                 for &value in row {
                     write!(file, "{} ", value)?;
@@ -323,14 +317,18 @@ fn load_game() -> io::Result<[[u16; SIZE]; SIZE]> {
     for i in 0..SIZE {
         let mut buffer = String::new();
 
+        let bytes = buf_reader.read_line(&mut buffer)?;
         // Read a line from the buffered reader
-        if buf_reader.read_line(&mut buffer)? > 0 {
+        if bytes > 0 {
             // Parse values and fill the matrix
             for (j, value_str) in buffer.trim().split_whitespace().enumerate().take(SIZE) {
                 if let Ok(value) = value_str.parse() {
                     game_matrix[i][j] = value;
                 }
             }
+        } else if bytes == 0 {
+            println!("file empty");
+            return Ok(game_matrix);
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -342,23 +340,47 @@ fn load_game() -> io::Result<[[u16; SIZE]; SIZE]> {
     Ok(game_matrix)
 }
 
+fn is_matrix_empty(matrix: [[u16; SIZE]; SIZE]) -> bool {
+    for row in matrix.iter() {
+        for &val in row {
+            if val != 0 {
+                return true;
+            }
+        }
+    }
+    false
+}
+fn clear_file_contents(file_path: &str) -> io::Result<()> {
+    let file = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open(file_path)?;
+
+    // Set the length of the file to 0, effectively clearing its contents
+    file.set_len(0)?;
+
+    Ok(())
+}
 fn play_game(new_game: bool) -> io::Result<u8> {
     let mut game_matrix: [[u16; 4]; 4] = [[0; 4]; 4];
     if new_game {
+        clear_file_contents(FILE_NAME)?;
         game_matrix = put_random_value(&mut game_matrix);
         game_matrix = put_random_value(&mut game_matrix);
     } else {
         match load_game() {
             Ok(matrix) => {
-                game_matrix = matrix;
+                if !is_matrix_empty(matrix) {
+                    println!("You have no saved game. A new game will be generated for you!");
+                    game_matrix = put_random_value(&mut game_matrix);
+                    game_matrix = put_random_value(&mut game_matrix);
+                } else {
+                    game_matrix = matrix;
+                }
             }
             Err(error) => {
                 return Err(error);
             }
-        }
-        if is_game_finished(game_matrix) != 0 {
-            println!("You don't have a saved game!");
-            menu()?;
         }
     }
 
@@ -390,7 +412,7 @@ fn play_game(new_game: bool) -> io::Result<u8> {
             if move_right(&mut game_matrix) {
                 game_matrix = put_random_value(&mut game_matrix);
             }
-        } else if event == Event::Key(KeyCode::Enter.into()) {
+        } else if event == Event::Key(KeyCode::Esc.into()) {
             break;
         } else {
             continue;
@@ -402,7 +424,7 @@ fn play_game(new_game: bool) -> io::Result<u8> {
             }
             println!("");
         }
-        
+        println!("");
         state = is_game_finished(game_matrix);
     }
     Ok(state)
@@ -416,7 +438,10 @@ they merge into one. Once you get 2048 in any square, you win. Once you reach a 
 where no more possible moves can be made, you lose!"
     );
     println!("The game saves automatically after every move so you can pick up right where you left from!");
+    println!("You can press ESC at any time to quit the game.")
 }
+
+
 
 fn menu() -> io::Result<u8> {
     enable_raw_mode()?;
@@ -488,9 +513,15 @@ fn menu() -> io::Result<u8> {
 fn main() -> io::Result<()> {
     match menu() {
         Ok(state) => match state {
-            1 => print!("Congratulations! You won!"),
-            2 => print!("Game over!"),
-            _ => println!("Goodbye! See you around!"),
+            1 => {
+                print!("Congratulations! You won!");
+                clear_file_contents(FILE_NAME)?;
+            }
+            2 => {
+                print!("Game over!");
+                clear_file_contents(FILE_NAME)?;
+            }
+            _ => print!("Goodbye! See you around!"),
         },
         Err(error) => {
             return Err(error);
