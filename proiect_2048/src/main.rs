@@ -178,7 +178,7 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
                 cnt += 1;
             }
         }
-
+        
         //update the values of the column
         for i in 0..SIZE - 1 {
             if compressed_row[i] == compressed_row[i + 1] {
@@ -186,18 +186,29 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
                 compressed_row[i + 1] = 0;
             }
         }
-
+        compressed_row =
+            compressed_row.iter().filter(|&&value| value != 0).cloned().collect();
+        // println!("{:?}",compressed_row);
+        // println!();
         //add the values back to the board
-        cnt = SIZE - 1;
+        cnt = SIZE;
 
         for &value in compressed_row.iter() {
-            if value != 0 {
-                board[cnt][col] = value;
+                board[cnt-1][col] = value;
                 cnt = cnt.saturating_sub(1);
-            }
         }
 
+        // for row in board.iter_mut().rev().take(SIZE)
+        // {
+        //     if compressed_row[cnt] != 0
+        //     {
+        //         row[col] = compressed_row[cnt];
+        //         cnt = cnt.saturating_add(1);
+        //     }
+        // }
+        // println!{"{}\n",cnt};
         //fill with zeroes
+        
         for row in board.iter_mut().take(cnt) {
             row[col] = 0;
         }
