@@ -1,5 +1,5 @@
-use std::io::{self, Write, BufRead, BufReader};
 use std::fs::{File, OpenOptions};
+use std::io::{self, BufRead, BufReader, Write};
 
 use crossterm::event::{Event, KeyCode, KeyboardEnhancementFlags, PushKeyboardEnhancementFlags};
 use crossterm::{
@@ -173,7 +173,7 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
     let initial_board = board.clone();
     for col in 0..SIZE {
         //compress all non zero values up (or left, as it looks) and let zeroes be down(or right as it looks)
-        let mut compressed_row: Vec<u16> = vec![0, 0, 0, 0]; 
+        let mut compressed_row: Vec<u16> = vec![0, 0, 0, 0];
         let mut cnt = 0;
         for row in (0..SIZE).rev() {
             if board[row][col] != 0 {
@@ -181,13 +181,15 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
                 cnt += 1;
             }
         }
+        
         //update the values of the column
-        for i in 0..SIZE - 1{
+        for i in 0..SIZE - 1 {
             if compressed_row[i] == compressed_row[i + 1] {
                 compressed_row[i] *= 2;
                 compressed_row[i + 1] = 0;
             }
         }
+        
         //add the values back to the board
         cnt = SIZE - 1;
 
@@ -199,10 +201,12 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
                 }
             }
         }
+        
         //fill with zeroes
         for i in 0..cnt {
             board[i][col] = 0;
         }
+       
     }
     for i in 0..4 {
         for j in 0..4 {
@@ -215,34 +219,28 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
 }
 
 fn is_game_finished(matrix: [[u16; 4]; 4]) -> u8 {
-
-
     let mut dummy_matrix = matrix.clone();
 
     let mut loser_cnt = 0;
-    if !move_down(&mut dummy_matrix)
-    {
-        loser_cnt+=1;
-    }
-    
-    dummy_matrix = matrix.clone();
-    if !move_up(&mut dummy_matrix)
-    {
-        loser_cnt+=1;
+    if !move_down(&mut dummy_matrix) {
+        loser_cnt += 1;
     }
     dummy_matrix = matrix.clone();
-    if !move_left(&mut dummy_matrix)
-    {
-        loser_cnt+=1;
-    }
-    dummy_matrix = matrix.clone();
-    if !move_right(&mut dummy_matrix)
-    {
-        loser_cnt+=1;
+    if !move_up(&mut dummy_matrix) {
+        loser_cnt += 1;
     }
 
-    if loser_cnt == 4
-    {
+    dummy_matrix = matrix.clone();
+    if !move_left(&mut dummy_matrix) {
+        loser_cnt += 1;
+    }
+
+    dummy_matrix = matrix.clone();
+    if !move_right(&mut dummy_matrix) {
+        loser_cnt += 1;
+    }
+
+    if loser_cnt == 4 {
         return 2;
     }
     for i in matrix.iter() {
@@ -253,11 +251,27 @@ fn is_game_finished(matrix: [[u16; 4]; 4]) -> u8 {
         }
     }
 
-
     return 0;
 }
 
 fn put_random_value(matrix: &mut [[u16; 4]; 4]) -> [[u16; 4]; 4] {
+    let mut ok:bool = false;
+    for i in 0..SIZE
+    {
+        for j in 0..SIZE
+        {
+            if matrix[i][j] == 0
+            {
+                ok = true;
+                break;
+            }
+        }
+    }
+    if !ok
+    {
+        return *matrix;
+    }
+    
     let mut rng = rand::thread_rng();
     let mut rand_row: u8 = rng.gen_range(0..4);
     let mut rand_col: u8 = rng.gen_range(0..4);
@@ -275,32 +289,30 @@ fn put_random_value(matrix: &mut [[u16; 4]; 4]) -> [[u16; 4]; 4] {
     *matrix
 }
 
-fn save_game(board: &[[u16;SIZE];SIZE]) -> io::Result<()>
-{
-    match OpenOptions::new().write(true).truncate(true).create(true).open(FILE_NAME)
+fn save_game(board: &[[u16; SIZE]; SIZE]) -> io::Result<()> {
+    match OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(FILE_NAME)
     {
-        Ok(mut file) =>
-        {
-            for row in board
-            {
-                for &value in row
-                {
+        Ok(mut file) => {
+            
+            for row in board {
+                for &value in row {
                     write!(file, "{} ", value)?;
                 }
                 writeln!(file)?;
             }
             Ok(())
         }
-        Err(error) =>
-        {
+        Err(error) => {
             return Err(error);
         }
     }
 }
 
-
-fn load_game() -> io::Result<[[u16;SIZE];SIZE]>
-{
+fn load_game() -> io::Result<[[u16; SIZE]; SIZE]> {
     let file = File::open(FILE_NAME)?;
 
     let mut game_matrix: [[u16; SIZE]; SIZE] = [[0; SIZE]; SIZE];
@@ -310,7 +322,7 @@ fn load_game() -> io::Result<[[u16;SIZE];SIZE]>
 
     for i in 0..SIZE {
         let mut buffer = String::new();
-        
+
         // Read a line from the buffered reader
         if buf_reader.read_line(&mut buffer)? > 0 {
             // Parse values and fill the matrix
@@ -328,32 +340,23 @@ fn load_game() -> io::Result<[[u16;SIZE];SIZE]>
     }
 
     Ok(game_matrix)
-
-    
 }
 
-
-fn play_game(new_game: bool) -> io::Result<u8>
-{
-    let mut game_matrix: [[u16; 4]; 4]= [[0; 4]; 4];
+fn play_game(new_game: bool) -> io::Result<u8> {
+    let mut game_matrix: [[u16; 4]; 4] = [[0; 4]; 4];
     if new_game {
-    game_matrix = put_random_value(&mut game_matrix);
-    game_matrix = put_random_value(&mut game_matrix);
-    }
-    else {
-        match load_game()
-        {
-            Ok(matrix) =>
-            {
+        game_matrix = put_random_value(&mut game_matrix);
+        game_matrix = put_random_value(&mut game_matrix);
+    } else {
+        match load_game() {
+            Ok(matrix) => {
                 game_matrix = matrix;
             }
-            Err(error) =>
-            {
+            Err(error) => {
                 return Err(error);
             }
         }
-        if is_game_finished(game_matrix) !=0
-        {
+        if is_game_finished(game_matrix) != 0 {
             println!("You don't have a saved game!");
             menu()?;
         }
@@ -399,18 +402,19 @@ fn play_game(new_game: bool) -> io::Result<u8>
             }
             println!("");
         }
-        println!("");
+        
         state = is_game_finished(game_matrix);
     }
     Ok(state)
 }
 
-fn how_to_play()
-{
-    println!("Use your arrow keys or swipe left or right, up or down to move the tiles.
+fn how_to_play() {
+    println!(
+        "Use your arrow keys or swipe left or right, up or down to move the tiles.
 When two tiles with the same number touch, 
 they merge into one. Once you get 2048 in any square, you win. Once you reach a state
-where no more possible moves can be made, you lose!");
+where no more possible moves can be made, you lose!"
+    );
     println!("The game saves automatically after every move so you can pick up right where you left from!");
 }
 
@@ -448,26 +452,20 @@ fn menu() -> io::Result<u8> {
         match read() {
             Ok(event) => {
                 if event == Event::Key(KeyCode::Char('1').into()) {
-                    match play_game(true)
-                    {
-                        Ok(state) =>
-                        {   
+                    match play_game(true) {
+                        Ok(state) => {
                             return Ok(state);
                         }
-                        Err(error) =>
-                        {
+                        Err(error) => {
                             return Err(error);
                         }
                     }
                 } else if event == Event::Key(KeyCode::Char('2').into()) {
-                    match play_game(false)
-                    {
-                        Ok(state) =>
-                        {
+                    match play_game(false) {
+                        Ok(state) => {
                             return Ok(state);
                         }
-                        Err(error) =>
-                        {
+                        Err(error) => {
                             return Err(error);
                         }
                     }
@@ -489,20 +487,15 @@ fn menu() -> io::Result<u8> {
 
 fn main() -> io::Result<()> {
     match menu() {
-        Ok(state) => {
-            match state
-            {
-                1 => print!("Congratulations! You won!"),
-                2 => print!("Game over!"),
-                _ => println!("Goodbye! See you around!"),
-            }
-            
-        }
+        Ok(state) => match state {
+            1 => print!("Congratulations! You won!"),
+            2 => print!("Game over!"),
+            _ => println!("Goodbye! See you around!"),
+        },
         Err(error) => {
             return Err(error);
         }
     }
-    
 
     Ok(())
 }
