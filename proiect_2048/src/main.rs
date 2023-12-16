@@ -188,8 +188,7 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
         }
         compressed_row =
             compressed_row.iter().filter(|&&value| value != 0).cloned().collect();
-        // println!("{:?}",compressed_row);
-        // println!();
+        
         //add the values back to the board
         cnt = SIZE;
 
@@ -198,15 +197,7 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
                 cnt = cnt.saturating_sub(1);
         }
 
-        // for row in board.iter_mut().rev().take(SIZE)
-        // {
-        //     if compressed_row[cnt] != 0
-        //     {
-        //         row[col] = compressed_row[cnt];
-        //         cnt = cnt.saturating_add(1);
-        //     }
-        // }
-        // println!{"{}\n",cnt};
+        
         //fill with zeroes
         
         for row in board.iter_mut().take(cnt) {
