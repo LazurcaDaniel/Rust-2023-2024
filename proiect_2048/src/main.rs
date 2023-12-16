@@ -1,4 +1,5 @@
 use std::fs::{File, OpenOptions};
+
 use std::io::{self, BufRead, BufReader, Write, ErrorKind, Error};
 
 use crossterm::event::{Event, KeyCode, KeyboardEnhancementFlags, PushKeyboardEnhancementFlags};
@@ -309,7 +310,8 @@ fn load_game() -> io::Result<[[u16; SIZE]; SIZE]> {
 
     // Create BufReader outside the loop
     let mut buf_reader = BufReader::new(file);
-
+    
+    
     for i in 0..SIZE {
         let mut buffer = String::new();
 
@@ -318,11 +320,20 @@ fn load_game() -> io::Result<[[u16; SIZE]; SIZE]> {
         match bytes.cmp(&0) {
             std::cmp::Ordering::Greater => {
                 // Parse values and fill the matrix
+                if bytes < SIZE * std::mem::size_of::<u16>()
+                {
+                    return Err(Error::new(
+                        ErrorKind::InvalidData,
+                        "File does not contain enough data for the matrix",
+                    ));
+                }
+                
                 for (j, value_str) in buffer.split_whitespace().enumerate().take(SIZE) {
                     if let Ok(value) = value_str.parse() {
                         game_matrix[i][j] = value;
                     }
                 }
+                
             }
             std::cmp::Ordering::Equal => return Ok(game_matrix),
             std::cmp::Ordering::Less => {
@@ -333,7 +344,8 @@ fn load_game() -> io::Result<[[u16; SIZE]; SIZE]> {
             }
         }
     }
-
+    
+    
     Ok(game_matrix)
 }
 
@@ -385,7 +397,8 @@ fn play_game(new_game: bool) -> io::Result<u8> {
 
     for row in &game_matrix {
         for &val in row.iter().take(SIZE) {
-            print! {"{} ", val};
+            let spaces = " ".repeat(5 - val.to_string().len());
+            print! {"{}{}",val,spaces};
         }
         println!();
     }
@@ -419,7 +432,8 @@ fn play_game(new_game: bool) -> io::Result<u8> {
         save_game(&game_matrix)?;
         for row in &game_matrix {
             for &val in row.iter().take(SIZE) {
-                print! {"{} ", val};
+                let spaces = " ".repeat(5 - val.to_string().len());
+                print! {"{}{}",val,spaces};
             }
             println!();
         }
