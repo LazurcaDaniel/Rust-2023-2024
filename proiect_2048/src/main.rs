@@ -1,5 +1,5 @@
 use std::fs::{File, OpenOptions};
-use std::io::{self, BufRead, BufReader, Write};
+use std::io::{self, BufRead, BufReader, Write, ErrorKind, Error};
 
 use crossterm::event::{Event, KeyCode, KeyboardEnhancementFlags, PushKeyboardEnhancementFlags};
 use crossterm::{
@@ -15,50 +15,45 @@ const FILE_NAME: &str = "save_file.txt";
 fn move_right(board: &mut [[u16; SIZE]; SIZE]) -> bool {
     let initial_board = *board;
 
-    for mut row in board.iter() {
+    for row in board.iter_mut().take(SIZE) {
         // Compress non-zero values to the left
-        let mut compressed_row: Vec<u16> = row
-            .iter()
-            .filter(|&&value| value != 0)
-            .cloned()
-            .collect();
-
-        let mut remaining_zeros = SIZE - compressed_row.len();
-        //Pad the vector with zeros to the left
-        while remaining_zeros > 0 {
-            compressed_row.insert(0, 0);
-            if remaining_zeros > 0 {
-                remaining_zeros -= 1;
+        let compressed_row: Vec<u16> =
+            row.iter().filter(|&&value| value != 0).cloned().collect();
+       
+        let remaining_zeros = SIZE - compressed_row.len();
+        let mut compressed_row = compressed_row;
+        compressed_row.extend(std::iter::repeat(0).take(remaining_zeros));
+       
+        // Update the row with the compressed values
+            for (i, value) in compressed_row.iter().rev().enumerate() {
+                row[i] = *value;
             }
-        }
-        row = compressed_row.as_slice().try_into().unwrap();
     }
 
-    for row in 0..SIZE {
-        for col in (1..4).rev() {
+    for row in board.iter_mut().take(SIZE) {
+        for col in (1..SIZE).rev() {
             // Merge adjacent values in the board
-            if board[row][col] == board[row][col - 1] {
-                board[row][col] *= 2;
-                board[row][col - 1] = 0;
+            if row[col] == row[col - 1] {
+                row[col] *= 2;
+                row[col - 1] = 0;
             }
         }
     }
 
     // Recompress all non-zero values to the right
-    for row in 0..SIZE {
-        let mut compressed_row: Vec<u16> = board[row]
-            .iter()
-            .filter(|&&value| value != 0)
-            .cloned()
-            .collect();
+    for row in board.iter_mut().take(SIZE) {
+        let compressed_row: Vec<u16> =
+            row.iter().filter(|&&value| value != 0).cloned().collect();
 
-        let mut remaining_zeros = SIZE - compressed_row.len();
+        let remaining_zeros = SIZE - compressed_row.len();
 
-        while remaining_zeros > 0 {
-            compressed_row.insert(0, 0);
-            remaining_zeros -= 1;
+        let mut compressed_row = compressed_row;
+        compressed_row.extend(std::iter::repeat(0).take(remaining_zeros));
+
+        // Update the row with the compressed values
+        for (i, value) in compressed_row.iter().rev().enumerate() {
+            row[i] = *value;
         }
-        board[row] = compressed_row.as_slice().try_into().unwrap();
     }
 
     //Check of the board has changed to see whether or not to add a new value to the board
@@ -74,44 +69,42 @@ fn move_right(board: &mut [[u16; SIZE]; SIZE]) -> bool {
 }
 
 fn move_left(board: &mut [[u16; SIZE]; SIZE]) -> bool {
-    let initial_board = board.clone();
+    let initial_board = *board;
 
-    for row in 0..SIZE {
+    for row in board.iter_mut().take(SIZE) {
         // Compress non-zero values to the left
-        let mut compressed_row: Vec<u16> = board[row]
-            .iter()
-            .filter(|&&value| value != 0)
-            .cloned()
-            .collect();
+        let compressed_row: Vec<u16> = row.iter().filter(|&&value| value != 0).cloned().collect();
 
         // Pad the row with zeros to the right
+        let mut compressed_row = compressed_row;
         compressed_row.resize(SIZE, 0);
 
         // Update the row in the game board
-        board[row] = compressed_row.as_slice().try_into().unwrap();
+        for (i, value) in compressed_row.iter().enumerate() {
+            row[i] = *value;
+        }
     }
 
     // Merge adjacent equal values in each row
-    for row in 0..SIZE {
+    for row in board.iter_mut().take(SIZE) {
         for col in 0..SIZE - 1 {
-            if board[row][col] == board[row][col + 1] {
-                board[row][col] *= 2;
-                board[row][col + 1] = 0;
+            if row[col] == row[col + 1] {
+                row[col] *= 2;
+                row[col + 1] = 0;
             }
         }
     }
 
     // Compress non-zero values to the left again after merging
-    for row in 0..SIZE {
-        let mut compressed_row: Vec<u16> = board[row]
-            .iter()
-            .filter(|&&value| value != 0)
-            .cloned()
-            .collect();
+    for row in board.iter_mut().take(SIZE) {
+        let compressed_row: Vec<u16> = row.iter().filter(|&&value| value != 0).cloned().collect();
 
+        let mut compressed_row = compressed_row;
         compressed_row.resize(SIZE, 0);
 
-        board[row] = compressed_row.as_slice().try_into().unwrap();
+        for (i, value) in compressed_row.iter().enumerate() {
+            row[i] = *value;
+        }
     }
 
     //Check of the board has changed to see whether or not to add a new value to the board
@@ -122,41 +115,45 @@ fn move_left(board: &mut [[u16; SIZE]; SIZE]) -> bool {
             }
         }
     }
-    return false;
+    false
 }
 
 fn move_up(board: &mut [[u16; SIZE]; SIZE]) -> bool {
-    let initial_board = board.clone();
+    let initial_board = *board;
 
     for col in 0..4 {
         //compress all non zero values up (or left, as it looks) and let zeroes be down(or right as it looks)
         let mut compressed_row: Vec<u16> = vec![0, 0, 0, 0];
         let mut cnt = 0;
-        for row in 0..SIZE {
-            if board[row][col] != 0 {
-                compressed_row[cnt] = board[row][col];
+        for row in board.iter_mut().take(SIZE) {
+            if row[col] != 0 {
+                compressed_row[cnt] = row[col];
                 cnt += 1;
             }
         }
+
         //update the values of the column
-        for i in 0..SIZE - 1 {
-            if compressed_row[i] == compressed_row[i + 1] {
-                compressed_row[i] *= 2;
-                compressed_row[i + 1] = 0;
+        let mut iter = compressed_row.iter_mut().take(SIZE).peekable();
+        
+        while let Some(i) = iter.next() {
+            if let Some(next_value) = iter.peek() {
+                if *i == **next_value {
+                    *i *= 2;
+                    *iter.next().unwrap() = 0;
+                }
             }
         }
         //add the values back to the board
         cnt = 0;
-
-        for i in 0..SIZE {
-            if compressed_row[i] != 0 {
-                board[cnt][col] = compressed_row[i];
+        for &value in compressed_row[..SIZE].iter() {
+            if value != 0 {
+                board[cnt][col] = value;
                 cnt += 1;
             }
         }
         //fill with zeroes
-        for i in cnt..SIZE {
-            board[i][col] = 0;
+        for row in board.iter_mut().take(SIZE).skip(cnt) {
+            row[col] = 0;
         }
     }
     for i in 0..4 {
@@ -166,11 +163,11 @@ fn move_up(board: &mut [[u16; SIZE]; SIZE]) -> bool {
             }
         }
     }
-    return false;
+    false
 }
 
 fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
-    let initial_board = board.clone();
+    let initial_board = *board;
     for col in 0..SIZE {
         //compress all non zero values up (or left, as it looks) and let zeroes be down(or right as it looks)
         let mut compressed_row: Vec<u16> = vec![0, 0, 0, 0];
@@ -193,18 +190,16 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
         //add the values back to the board
         cnt = SIZE - 1;
 
-        for i in 0..SIZE {
-            if compressed_row[i] != 0 {
-                board[cnt][col] = compressed_row[i];
-                if cnt > 0 {
-                    cnt -= 1;
-                }
+        for &value in compressed_row.iter() {
+            if value != 0 {
+                board[cnt][col] = value;
+                cnt = cnt.saturating_sub(1);
             }
         }
 
         //fill with zeroes
-        for i in 0..cnt {
-            board[i][col] = 0;
+        for row in board.iter_mut().take(cnt) {
+            row[col] = 0;
         }
     }
     for i in 0..4 {
@@ -214,7 +209,7 @@ fn move_down(board: &mut [[u16; SIZE]; SIZE]) -> bool {
             }
         }
     }
-    return false;
+    false
 }
 
 fn is_game_finished(matrix: [[u16; 4]; 4]) -> u8 {
@@ -250,14 +245,14 @@ fn is_game_finished(matrix: [[u16; 4]; 4]) -> u8 {
         }
     }
 
-    return 0;
+    0
 }
 
 fn put_random_value(matrix: &mut [[u16; 4]; 4]) -> [[u16; 4]; 4] {
     let mut ok: bool = false;
-    for i in 0..SIZE {
-        for j in 0..SIZE {
-            if matrix[i][j] == 0 {
+    for row in matrix.iter_mut().take(SIZE) {
+        for &val in row.iter().take(SIZE) {
+            if val == 0 {
                 ok = true;
                 break;
             }
@@ -281,6 +276,7 @@ fn put_random_value(matrix: &mut [[u16; 4]; 4]) -> [[u16; 4]; 4] {
     } else {
         matrix[rand_row as usize][rand_col as usize] = 2
     }
+    
     *matrix
 }
 
@@ -300,9 +296,7 @@ fn save_game(board: &[[u16; SIZE]; SIZE]) -> io::Result<()> {
             }
             Ok(())
         }
-        Err(error) => {
-            return Err(error);
-        }
+        Err(error) => Err(error)  
     }
 }
 
@@ -319,21 +313,22 @@ fn load_game() -> io::Result<[[u16; SIZE]; SIZE]> {
 
         let bytes = buf_reader.read_line(&mut buffer)?;
         // Read a line from the buffered reader
-        if bytes > 0 {
-            // Parse values and fill the matrix
-            for (j, value_str) in buffer.trim().split_whitespace().enumerate().take(SIZE) {
-                if let Ok(value) = value_str.parse() {
-                    game_matrix[i][j] = value;
+        match bytes.cmp(&0) {
+            std::cmp::Ordering::Greater => {
+                // Parse values and fill the matrix
+                for (j, value_str) in buffer.split_whitespace().enumerate().take(SIZE) {
+                    if let Ok(value) = value_str.parse() {
+                        game_matrix[i][j] = value;
+                    }
                 }
             }
-        } else if bytes == 0 {
-            println!("file empty");
-            return Ok(game_matrix);
-        } else {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "File does not contain enough data for the matrix",
-            ));
+            std::cmp::Ordering::Equal => return Ok(game_matrix),
+            std::cmp::Ordering::Less => {
+                return Err(Error::new(
+                    ErrorKind::InvalidData,
+                    "File does not contain enough data for the matrix",
+                ));
+            }
         }
     }
 
@@ -350,6 +345,7 @@ fn is_matrix_empty(matrix: [[u16; SIZE]; SIZE]) -> bool {
     }
     false
 }
+
 fn clear_file_contents(file_path: &str) -> io::Result<()> {
     let file = OpenOptions::new()
         .write(true)
@@ -361,6 +357,7 @@ fn clear_file_contents(file_path: &str) -> io::Result<()> {
 
     Ok(())
 }
+
 fn play_game(new_game: bool) -> io::Result<u8> {
     let mut game_matrix: [[u16; 4]; 4] = [[0; 4]; 4];
     if new_game {
@@ -384,13 +381,13 @@ fn play_game(new_game: bool) -> io::Result<u8> {
         }
     }
 
-    for i in 0..4 {
-        for j in 0..4 {
-            print! {"{} ", game_matrix[i][j]};
+    for row in &game_matrix {
+        for &val in row.iter().take(SIZE) {
+            print! {"{} ", val};
         }
-        println!("");
+        println!();
     }
-    println!("");
+    println!();
     let mut state = 0;
     //let mut state = is_game_finished(game_matrix);
     while state == 0 {
@@ -418,13 +415,13 @@ fn play_game(new_game: bool) -> io::Result<u8> {
             continue;
         }
         save_game(&game_matrix)?;
-        for i in 0..4 {
-            for j in 0..4 {
-                print! {"{} ", game_matrix[i][j]};
+        for row in &game_matrix {
+            for &val in row.iter().take(SIZE) {
+                print! {"{} ", val};
             }
-            println!("");
+            println!();
         }
-        println!("");
+        println!();
         state = is_game_finished(game_matrix);
     }
     Ok(state)
@@ -440,8 +437,6 @@ where no more possible moves can be made, you lose!"
     println!("The game saves automatically after every move so you can pick up right where you left from!");
     println!("You can press ESC at any time to quit the game.")
 }
-
-
 
 fn menu() -> io::Result<u8> {
     enable_raw_mode()?;
